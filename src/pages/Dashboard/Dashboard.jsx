@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LogOut,
@@ -8,24 +8,21 @@ import {
   Loader,
   Users,
   AlertTriangle,
-  Clipboard,
-  Edit2, // Added icon for Edit
-  X,     // Added icon for Cancel
-  Check  // Added icon for Save
+  Edit2,
+  X,
+  Check
 } from 'lucide-react';
 
-// Use standard API URL
-const API_URL = "http://localhost:5000/api";
-
 const Dashboard = () => {
-  // Assuming theme is managed via context or props (simplified here)
-  const theme = 'light'; 
   const navigate = useNavigate();
 
   // State
   const [user, setUser] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [newDocName, setNewDocName] = useState('');
+  const [newDocType, setNewDocType] = useState('PDF');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest'); // 'newest' | 'oldest' | 'az'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -33,128 +30,72 @@ const Dashboard = () => {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
 
-  // Helper to get headers
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  // 1. Check Auth & Load Data on Mount
+  // Load user and documents from localStorage on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user'); // Assuming you save user object on login
-
-    if (!token) {
-      navigate('/login');
-      return;
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        setUser(null);
+      }
     }
 
-    if (storedUser) setUser(JSON.parse(storedUser));
-    fetchDocuments();
-  }, [navigate]);
-
-  // 2. READ: Fetch Documents from API
-  const fetchDocuments = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/documents`, {
-        headers: getAuthHeaders()
-      });
-      
-      if (!res.ok) throw new Error('Failed to fetch documents');
-      
-      const data = await res.json();
-      setDocuments(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    const storedDocs = localStorage.getItem('documents');
+    if (storedDocs) {
+      try {
+        setDocuments(JSON.parse(storedDocs));
+      } catch {
+        setDocuments([]);
+      }
     }
+  }, []);
+
+  const persistDocuments = (nextDocs) => {
+    setDocuments(nextDocs);
+    localStorage.setItem('documents', JSON.stringify(nextDocs));
   };
 
-  // 3. CREATE: Add Document via API
-  const handleAddDoc = async () => {
+  // CREATE: Add Document (frontend only)
+  const handleAddDoc = () => {
     if (!newDocName.trim()) return;
-    setLoading(true);
     setError(null);
 
-    try {
-      const res = await fetch(`${API_URL}/documents`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ name: newDocName, type: 'PDF' })
-      });
+    const newDoc = {
+      _id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name: newDocName.trim(),
+      type: newDocType,
+      createdAt: new Date().toISOString(),
+    };
 
-      if (!res.ok) throw new Error('Failed to create document');
-
-      const newDoc = await res.json();
-      // Add to state immediately
-      setDocuments(prev => [newDoc, ...prev]);
-      setNewDocName('');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    const nextDocs = [newDoc, ...documents];
+    persistDocuments(nextDocs);
+    setNewDocName('');
   };
 
-  // 4. DELETE: Remove Document via API
-  const handleDeleteDoc = async (docId) => {
+  // DELETE: Remove Document (frontend only)
+  const handleDeleteDoc = (docId) => {
     if (!window.confirm("Are you sure you want to delete this?")) return;
-    
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/documents/${docId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-
-      if (!res.ok) throw new Error('Failed to delete');
-
-      setDocuments(prev => prev.filter(doc => doc._id !== docId));
-    } catch (err) {
-      setError("Could not delete document");
-    } finally {
-      setLoading(false);
-    }
+    const nextDocs = documents.filter(doc => doc._id !== docId);
+    persistDocuments(nextDocs);
   };
 
-  // 5. UPDATE: Rename Document via API
+  // UPDATE: Rename Document (frontend only)
   const startEditing = (doc) => {
     setEditingId(doc._id);
     setEditName(doc.name);
   };
 
-  const handleUpdateDoc = async (docId) => {
+  const handleUpdateDoc = (docId) => {
     if (!editName.trim()) return;
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API_URL}/documents/${docId}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ name: editName })
-      });
-
-      if (!res.ok) throw new Error('Failed to update');
-
-      // Update local state
-      setDocuments(prev => prev.map(doc => 
-        doc._id === docId ? { ...doc, name: editName } : doc
-      ));
-      setEditingId(null);
-    } catch (err) {
-      setError("Could not update document name");
-    } finally {
-      setLoading(false);
-    }
+    const nextDocs = documents.map(doc =>
+      doc._id === docId ? { ...doc, name: editName.trim() } : doc
+    );
+    persistDocuments(nextDocs);
+    setEditingId(null);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
@@ -162,6 +103,28 @@ const Dashboard = () => {
   // --- RENDER HELPERS ---
   const COLOR_LIGHT_BG = '#F9FAFB';
   const COLOR_TEXT_DARK = '#1E293B';
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredDocs = normalizedSearch
+    ? documents.filter((doc) => {
+        const name = doc.name?.toLowerCase() || '';
+        const type = doc.type?.toLowerCase() || '';
+        return name.includes(normalizedSearch) || type.includes(normalizedSearch);
+      })
+    : documents;
+
+  const sortedDocs = [...filteredDocs].sort((a, b) => {
+    if (sortOrder === 'az') {
+      return (a.name || '').localeCompare(b.name || '');
+    }
+    const aDate = new Date(a.createdAt || 0).getTime();
+    const bDate = new Date(b.createdAt || 0).getTime();
+    if (sortOrder === 'oldest') {
+      return aDate - bDate;
+    }
+    // default: newest first
+    return bDate - aDate;
+  });
 
   return (
     <div className={`min-h-screen pt-12 pb-12 font-inter bg-[${COLOR_LIGHT_BG}] text-[${COLOR_TEXT_DARK}]`}>
@@ -200,7 +163,7 @@ const Dashboard = () => {
         {/* INPUT SECTION */}
         <div className="mb-10 p-6 rounded-2xl shadow-xl bg-white shadow-gray-300/50">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">Upload New Document</h2>
-          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
             <input
               type="text"
               value={newDocName}
@@ -209,6 +172,17 @@ const Dashboard = () => {
               className="flex-grow p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-cyan-500 outline-none"
               onKeyDown={(e) => e.key === 'Enter' && handleAddDoc()}
             />
+            <select
+              value={newDocType}
+              onChange={(e) => setNewDocType(e.target.value)}
+              className="sm:w-40 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-cyan-500 outline-none text-sm bg-white"
+            >
+              <option value="PDF">PDF</option>
+              <option value="Word">Word</option>
+              <option value="Image">Image</option>
+              <option value="HTML">HTML</option>
+              <option value="Text">Text</option>
+            </select>
             <button
               onClick={handleAddDoc}
               disabled={!newDocName.trim() || loading}
@@ -220,10 +194,35 @@ const Dashboard = () => {
         </div>
 
         {/* LIST SECTION */}
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">My Documents ({documents.length})</h2>
+        <h2 className="text-3xl font-bold mb-3 text-gray-800">My Documents ({documents.length})</h2>
+
+        {/* FILTER / SORT BAR */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-3">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name or type..."
+            className="w-full md:w-1/2 p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-cyan-500 outline-none text-sm"
+          />
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">
+              Showing {sortedDocs.length} of {documents.length} document{documents.length !== 1 ? 's' : ''}
+            </span>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="p-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-cyan-500 outline-none bg-white"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="az">A–Z</option>
+            </select>
+          </div>
+        </div>
         
         <div className="space-y-4">
-          {documents.map((doc) => (
+          {sortedDocs.map((doc) => (
             <div key={doc._id} className="flex flex-col sm:flex-row items-center p-4 rounded-xl shadow-md bg-white border border-gray-100 hover:shadow-lg transition">
               <FileText size={24} className="mr-4 text-cyan-500 shrink-0" />
               

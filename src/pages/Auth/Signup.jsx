@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
-import { User, Mail, Lock, UserPlus, Loader2, ArrowLeft } from 'lucide-react';
+import { User, Mail, Lock, UserPlus, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 const COLOR_LIGHT_BG = '#F9FAFB';
 const COLOR_DARK_BG = '#0F172A';
@@ -9,9 +9,6 @@ const COLOR_ACCENT = '#06B6D4';
 const COLOR_DARK_TEXT = '#1E293B';
 const COLOR_MUTED = '#64748B';
 const COLOR_WHITE = '#FFFFFF';
-
-// Use standard API URL
-const API_URL = "http://localhost:5000/api/auth";
 
 const Signup = () => {
     const { theme } = useTheme();
@@ -22,6 +19,7 @@ const Signup = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     // State for hover effects
     const [isBackHovered, setIsBackHovered] = useState(false);
@@ -30,6 +28,7 @@ const Signup = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
         setLoading(true);
 
         try {
@@ -37,21 +36,13 @@ const Signup = () => {
                 throw new Error("Password must be at least 6 characters long.");
             }
             
-            // ✅ Connect to the real backend
-            const response = await fetch(`${API_URL}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Registration failed');
-            }
-            
-            // Redirect to login on success
-            navigate('/login'); 
+            // Frontend-only signup: store basic user info for later display.
+            const user = { name, email };
+            localStorage.setItem('user', JSON.stringify(user));
+            setSuccess('Account created (frontend only). Redirecting to login...');
+            setTimeout(() => {
+                navigate('/login');
+            }, 800);
 
         } catch (err) {
             console.error("Signup error:", err);
@@ -108,6 +99,12 @@ const Signup = () => {
                 {error && (
                     <div className="p-3 mb-4 rounded-lg bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-medium border border-red-300">
                         {error}
+                    </div>
+                )}
+                {success && (
+                    <div className="p-3 mb-4 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-300 flex items-center">
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        {success}
                     </div>
                 )}
 
