@@ -1,14 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
 import {
     FileType2,
     Image,
     Code,
     BookOpen,
-    Sun,
-    Moon,
     ArrowRight,
     Zap,
     Shield,
@@ -60,52 +57,6 @@ const features = [
     },
 ];
 
-const Header = () => {
-    const { theme, toggleTheme } = useTheme();
-    const { isAuthenticated } = useAuth();
-
-    return (
-        <header className="fixed w-full z-50 p-4 transition-colors duration-300 bg-[#F9FAFB]/95 dark:bg-[#0F172A]/95 shadow-xl dark:shadow-[#0F172A]/50 backdrop-blur-sm">
-            <div className="container mx-auto flex justify-between items-center max-w-7xl">
-                <Link to="/" className="text-2xl font-extrabold text-[#1E293B] dark:text-[#F9FAFB]">
-                    UniConvert
-                </Link>
-
-                <nav className="hidden md:flex space-x-8 text-[#1E293B] dark:text-[#F9FAFB] font-medium">
-                    <Link to="/services" className="hover:text-[#06B6D4] transition duration-150">Services</Link>
-                    <Link to="/about" className="hover:text-[#06B6D4] transition duration-150">About</Link>
-                    <Link to="/contact" className="hover:text-[#06B6D4] transition duration-150">Contact</Link>
-                </nav>
-
-                <div className="flex items-center space-x-3">
-                    {isAuthenticated ? (
-                        <Link
-                            to="/dashboard"
-                            className="px-5 py-2 bg-[#06B6D4] text-[#1E293B] rounded-lg font-semibold hover:bg-[#06B6D4]/90 transition duration-300 shadow-md shadow-[#06B6D4]/40  text-white dark:text-[#1E293B]"
-                        >
-                            Dashboard
-                        </Link>
-                    ) : (
-                        <Link
-                            to="/login"
-                            className="px-5 py-2 text-[#1E293B] dark:text-[#F9FAFB] bg-[#64748B]/10 dark:bg-[#06B6D4]/20 rounded-lg font-semibold hover:bg-[#06B6D4]/30 dark:hover:bg-[#06B6D4]/30 transition duration-300"
-                        >
-                            Login
-                        </Link>
-                    )}
-
-                    <button
-                        onClick={toggleTheme}
-                        className="p-3 rounded-full text-[#1E293B] dark:text-[#F9FAFB] hover:bg-[#06B6D4]/20 transition duration-150"
-                        aria-label="Toggle theme"
-                    >
-                        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                    </button>
-                </div>
-            </div>
-        </header>
-    );
-};
 
 const HeroSection = () => {
     return (
@@ -226,8 +177,7 @@ const Landing = () => {
 
     return (
         <div className={`min-h-screen font-inter ${bgColorClass} transition-colors duration-300`}>
-            <Header />
-            <main>
+            <main className="pt-24">
                 <HeroSection />
                 <ServicesShowcase />
                 <FeaturesSection />

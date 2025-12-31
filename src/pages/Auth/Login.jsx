@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTheme } from '../../contexts/ThemeContext'; // Assuming you have this
-import { useAuth } from '../../contexts/AuthContext';   // Uses the file created above
-import { Mail, Lock, LogIn, Loader2, ArrowLeft } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Mail, Lock, LogIn, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 // --- Color Palette (HEX values) ---
 const COLOR_LIGHT_BG = '#F9FAFB';   
@@ -14,13 +13,13 @@ const COLOR_WHITE = '#FFFFFF';
 
 const Login = () => {
     const { theme } = useTheme();
-    const { login } = useAuth();
     const navigate = useNavigate();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     
     // State to handle hover effects since Tailwind can't interpolate JS variables
     const [isLinkHovered, setIsLinkHovered] = useState(false);
@@ -28,15 +27,20 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
         setLoading(true);
 
         try {
-            // ✅ Calls the actual backend via AuthContext
-            await login({ email, password });
-            navigate('/dashboard'); 
+            // Frontend-only login: store basic user info for display in the dashboard.
+            const user = { name: email.split('@')[0] || 'User', email };
+            localStorage.setItem('user', JSON.stringify(user));
+            setSuccess('Login successful (frontend only). Redirecting to dashboard...');
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 800);
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Login failed. Please check your credentials.'); 
+            setError('Something went wrong. Please try again.'); 
         } finally {
             setLoading(false);
         }
@@ -89,10 +93,16 @@ const Login = () => {
                     Sign in to continue to your documents.
                 </p>
 
-                {/* Error Display */}
+                {/* Error / Success Display */}
                 {error && (
                     <div className="p-3 mb-4 rounded-lg bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-medium border border-red-300 flex items-center">
                         <span>{error}</span>
+                    </div>
+                )}
+                {success && (
+                    <div className="p-3 mb-4 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-300 flex items-center">
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        <span>{success}</span>
                     </div>
                 )}
 
